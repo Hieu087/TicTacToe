@@ -336,10 +336,6 @@ def compTurn(board):
         maxScore = ''
 
         # MINIMAX 
-        '''
-        Do nhóm em nhận thấy thuật toán Alpha-Beta không cần thiết nữa 
-        nên bọn em không áp dụng vào code ạ
-        '''
         moves = availPos_forCom(grid)
         for move in moves:
             y,x = move
