@@ -1,5 +1,4 @@
 # AUTHOR: Trần Trung Hiếu
-# STUDENT ID: 51703086
 
 import pygame
 import random
@@ -177,7 +176,7 @@ def checkPos(grid,y,x,dy,dx,length):
 
 # INITIALIZE THE POINT SYSTEM
 def scoreReady(scores):
-    sumSym = {0: {},1: {},2: {},3: {},4: {},5: {},-1: {}}
+    sumSym = {0:{}, 1:{}, 2:{}, 3:{}, 4:{}, 5:{}, -1:{}}
     for key in scores:
         for score in scores[key]:
             if key in sumSym[score]:
@@ -190,14 +189,11 @@ def scoreReady(scores):
 # MERGE POINTS OF EACH DIRECTION
 def sumValues(sumSym):
     for key in sumSym:
-        if key == 5:
-            sumSym[5] = int(1 in sumSym[5].values())
-        else:
-            sumSym[key] = sum(sumSym[key].values())
+        sumSym[key] = sum(sumSym[key].values())
 
-def score_of_list(lis, col):
-    blank = lis.count('_')
-    filled = lis.count(col)
+def score_of_list(list, sym):
+    blank = list.count('_')
+    filled = list.count(sym)
     
     if blank + filled < 5:
         return -1
@@ -224,21 +220,26 @@ def score_of_row(grid,cordi,dy,dx,cordf,sym):
     for start in range(len(row)-4):
         score = score_of_list(row[start:start+5],sym)
         symScores.append(score)
+
     return symScores
 
-# REUTRN THE SCORE OF COLUMN IN Y, X IN 4 DIRECTIONS
-def score_of_col_one(grid,col,y,x):
-    # key: điểm số khối đơn vị đó -> chỉ ktra 5 khối thay vì toàn bộ
+# REUTRN THE SCORE OF Y, X IN 4 DIRECTIONS
+def score_of_col_one(grid,sym,row,col):
     scores = {(0,1):[],(-1,1):[],(1,0):[],(1,1):[]}
-    
-    scores[(0,1)].extend(score_of_row(grid,checkPos(grid,y,x,0,-1,4), 0, 1, checkPos(grid,y,x,0,1,4), col))
-    
-    scores[(1,0)].extend(score_of_row(grid,checkPos(grid,y,x,-1,0,4), 1, 0, checkPos(grid,y,x,1,0,4), col))
-    
-    scores[(1,1)].extend(score_of_row(grid,checkPos(grid,y,x,-1,-1,4), 1, 1, checkPos(grid,y,x,1,1,4), col))
+    # NGANG
+    scores[(0,1)].extend(score_of_row(grid,checkPos(grid,row,col,0,-1,4), 0, 1, checkPos(grid,row,col,0,1,4), sym))
+    # DỌC
+    scores[(1,0)].extend(score_of_row(grid,checkPos(grid,row,col,-1,0,4), 1, 0, checkPos(grid,row,col,1,0,4), sym))
+    # CHÉO PHẢI
+    scores[(1,1)].extend(score_of_row(grid,checkPos(grid,row,col,-1,-1,4), 1, 1, checkPos(grid,row,col,1,1,4), sym))
+    # CHÉO TRÁI
+    scores[(-1,1)].extend(score_of_row(grid,checkPos(grid,row,col,-1,1,4), 1,-1, checkPos(grid,row,col,1,-1,4), sym))
 
-    scores[(-1,1)].extend(score_of_row(grid,checkPos(grid,y,x,-1,1,4), 1,-1, checkPos(grid,y,x,1,-1,4), col))
-    
+    print('(',row,col,')',sym)
+    print(scores)
+    print(scoreReady(scores))
+    print('-------------------------------------')
+
     return scoreReady(scores)
 
 # RETURN THE CASE SURELY WIN (4 CONSECCUTIVE SYMBOLS)
@@ -253,57 +254,48 @@ def danger(score3, score4):
 # RETURN THE WINNING SITUATION
 def winningSituation(sumSym):
     if 1 in sumSym[5].values():
-        return 5
+        return 500
     elif len(sumSym[4])>=2 or (len(sumSym[4])>=1 and max(sumSym[4].values())>=2):
-        return 4
+        return 400
     elif danger(sumSym[3],sumSym[4]):
-        return 4
+        return 400
     else:
         score3 = sorted(sumSym[3].values(),reverse = True)
         if len(score3) >= 2 and score3[0] >= score3[1] >= 2:
-            return 3
+            return 300
     return 0
 
-# TRY TO MOVE Y,X 
-# RETURN THE ADVANTAGE SCORE
-def minimax(Sym, oppoSym, y, x):
+def calScore(Sym, oppoSym, row, col):
     global grid
 
-    M = 1000
-    res, adv, dis = 0, 0, 0
+    res, advan, disAdvan = 0, 0, 0
 
-    # ATTACK
-    grid[y][x] = Sym
-    sumSym = score_of_col_one(grid,Sym,y,x)    
-    a = winningSituation(sumSym)
-    adv += a * M
+    # CALCULATE AVANTAGE SCORE
+    grid[row][col] = Sym
+    sumSym = score_of_col_one(grid,Sym,row,col)
+    advan += winningSituation(sumSym)
     sumValues(sumSym)
-    adv +=  sumSym[-1] + sumSym[1] + 4*sumSym[2] + 8*sumSym[3] + 16*sumSym[4]
+    advan += sumSym[-1] + sumSym[1] + 4*sumSym[2] + 8*sumSym[3] + 16*sumSym[4]
     
-    # DEFEND
-    grid[y][x] = oppoSym
-    sumOppoSym = score_of_col_one(grid,oppoSym,y,x)
-    d = winningSituation(sumOppoSym)
-    dis += d * (M-100)
+    # CALCULATE DISAVANTAGE SCORE
+    grid[row][col] = oppoSym
+    sumOppoSym = score_of_col_one(grid,oppoSym,row,col)
+    disAdvan += winningSituation(sumOppoSym)
     sumValues(sumOppoSym)
-    dis += sumOppoSym[-1] + sumOppoSym[1] + 4*sumOppoSym[2] + 8*sumOppoSym[3] + 16*sumOppoSym[4]
+    disAdvan += sumOppoSym[-1] + sumOppoSym[1] + 4*sumOppoSym[2] + 8*sumOppoSym[3] + 16*sumOppoSym[4]
 
-    res = adv + dis
-    
-    grid[y][x] = '_'
+    res = advan + disAdvan
+
+    grid[row][col] = '_'
 
     return res
 
-# INITIALIZE LIST OF COORDIANTES FOR COMPUTER
+# INITIALIZE LIST OF POSITION FOR COMPUTER
 def availPos_forCom(grid):  
-    # TAKEN: SAVE THE NON-AVAILABLE POSITIONS
     taken = []
-
-    # DIRECTIONS: SAVE THE DIRECTIONS (8 DIRECTIONS)
     directions = [(0,1),(0,-1),(1,0),(-1,0),(1,1),(-1,-1),(-1,1),(1,-1)]
 
-    # CORD: SAVE THE NO GO DIRECTIONS
-    cord = {}
+    pos = {}
     for i in range(len(grid)):
         for j in range(len(grid)):
             if grid[i][j] != '_':
@@ -315,9 +307,9 @@ def availPos_forCom(grid):
             y,x = cord1
             for length in [1,2]:
                 move = checkPos(grid,y,x,dy,dx,length)
-                if move not in taken and move not in cord:
-                    cord[move] = False
-    return cord
+                if move not in taken and move not in pos:
+                    pos[move] = False
+    return pos
 
 #COMPUTER TURN
 def compTurn(board):
@@ -333,21 +325,16 @@ def compTurn(board):
 
     else:            
         pos = (0,0)
-        maxScore = ''
+        bestScore = -inf
 
         # MINIMAX 
         moves = availPos_forCom(grid)
         for move in moves:
-            y,x = move
-            if maxScore == '':
-                score = minimax(humanSym, oppositeSym(humanSym), y, x)
-                maxScore = score
+            row, col = move
+            score = calScore(compSym, oppositeSym(compSym), row, col)
+            if score > bestScore:
+                bestScore = score
                 pos = move
-            else:
-                score = minimax(humanSym, oppositeSym(humanSym), y, x)
-                if score > maxScore:
-                    maxScore = score
-                    pos = move
         
         drawSym(board, pos[0], pos[1], compSym)
 
@@ -392,7 +379,7 @@ def main():
     pygame.display.set_caption ('Tic-Tac-Toe')
 
     # CREATE THE GAME'S BOARD
-    board = initBoard (gameDisplay)
+    board = initBoard(gameDisplay)
 
     running = True
     
@@ -411,7 +398,7 @@ def main():
 
     print('-------DONT CHOOSE THE TAKEN POSITIONS !!-------')
 
-    while (running):
+    while(running):
         for event in pygame.event.get():
             if event.type is QUIT:
                 running = False
